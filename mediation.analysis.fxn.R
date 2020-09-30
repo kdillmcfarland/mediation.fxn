@@ -58,6 +58,11 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
                           coVar=NULL, randVar=NULL, plot=FALSE,
                           boot=FALSE, outdir=NULL, prefix="mediation", ...){
   #### Setup ####
+  #Unload dplyr if loaded, to avoid issues with plyr
+  if ("dplyr" %in% (.packages())){
+    detach("package:dplyr", unload = TRUE)
+  }
+  
   #load packages
   require(plyr, quietly = TRUE)
   require(tidyverse, quietly = TRUE)
