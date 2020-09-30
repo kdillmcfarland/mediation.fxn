@@ -64,13 +64,13 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
   }
   
   #load packages
-  require(plyr, quietly = TRUE)
-  require(tidyverse, quietly = TRUE)
-  require(broom, quietly = TRUE) 
-  require(broom.mixed, quietly = TRUE)
-  require(lme4, quietly = TRUE)
-  library(car, quietly = TRUE)
-  require(mediation, quietly = TRUE)
+  require(plyr, quietly = TRUE, warn.conflicts = FALSE)
+  require(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
+  require(broom, quietly = TRUE, warn.conflicts = FALSE) 
+  require(broom.mixed, quietly = TRUE, warn.conflicts = FALSE)
+  require(lme4, quietly = TRUE, warn.conflicts = FALSE)
+  library(car, quietly = TRUE, warn.conflicts = FALSE)
+  require(mediation, quietly = TRUE, warn.conflicts = FALSE)
   #silence warnings
   options(warn=-1)
   
