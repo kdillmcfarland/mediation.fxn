@@ -485,14 +485,24 @@ basic.plot <- function(result=result, DV=DV, IV=IV, MED=MED,
   graph <- create_graph(nodes_df = nodes,
                         edges_df = edges,
                         attr_theme = "lr")
-  #### Save plot ####
+  #### Title plot ####
+  if("p.value" %in% colnames(result.mediation)){
   title.plot <- result.mediation %>% 
     distinct(term, estimate, p.value) %>% 
     mutate(p.value = ifelse(p.value < 0.001, "P<0.001", paste("P=",p.value, sep="")))
   title.plot <- paste(title.plot$term, round(title.plot$estimate, digits=3), 
                       title.plot$p.value, collapse = ", ")
   title.plot <- gsub(" NA$", "", title.plot)
+  } else{
+    title.plot <- result.mediation %>% 
+      mutate(across(is.numeric, ~round(.,digits=2)))
+    title.plot<-  paste("ACME=", title.plot$ACME,", ",
+                        "ADE=", title.plot$ADE,", ",
+                        "Tot effect=", title.plot$tot.Effect,", ",
+                        "Prop mediated=", title.plot$prop.mediated, sep="")
+  }
   
+  #### Save plot ####
   plot.dir <- paste(outdir, prefix, ".figs/", sep="")
   dir.create(plot.dir, showWarnings=FALSE, recursive=TRUE)
   plot.file <- paste(plot.dir, "/", name, ".png", sep="")
