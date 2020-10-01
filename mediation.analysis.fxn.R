@@ -60,13 +60,7 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
                           boot=FALSE, formal.med=TRUE,
                           plot=FALSE, outdir=NULL, prefix="mediation", ...){
   #### Setup ####
-  #Unload dplyr if loaded, to avoid issues with plyr
-  if ("dplyr" %in% (.packages())){
-    detach("package:dplyr", unload = TRUE)
-  }
-  
   #load packages
-  require(plyr, quietly = TRUE, warn.conflicts = FALSE)
   require(tidyverse, quietly = TRUE, warn.conflicts = FALSE)
   require(broom, quietly = TRUE, warn.conflicts = FALSE) 
   require(broom.mixed, quietly = TRUE, warn.conflicts = FALSE)
@@ -415,6 +409,8 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
   #### Save tables to disk ####
   df.file1 <- paste(outdir, prefix, ".mediation.models.csv", sep="")
   df.file2 <- paste(outdir, prefix, ".mediation.summary.csv", sep="")
+  
+  require(plyr, quietly = TRUE, warn.conflicts = FALSE)
   
   plyr::ldply(model.result) %>% 
     dplyr::rename(DV.IV.MED=`.id`) %>% 
