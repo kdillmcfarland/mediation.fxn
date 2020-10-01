@@ -79,6 +79,10 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
   assign("dv.family", dv.family, envir = .GlobalEnv)
   assign("mediator.family", mediator.family, envir = .GlobalEnv)}
   
+  #Warning if running formal mediation with binomial outcomes
+  if(dv.family=="binomial" & formal.med==TRUE){
+    message("Formal mediation is not recommended for binomial outcomes and may fail (https://doi.org/10.1186/s12874-018-0654-z). Consider setting formal.med=FALSE")
+  }
   
   #Force boot=TRUE if using binomial models
   if(dv.family=="binomial" & boot==FALSE){
