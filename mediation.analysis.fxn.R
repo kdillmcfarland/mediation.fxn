@@ -19,11 +19,11 @@ GNU General Public License for more details. <http://www.gnu.org/licenses/>
 Runs mediation analysis of 1 mediator on 1 independent and dependent variable
 
 REQUIRED
-  dat = data frame containing all variables in model
+  dat = data frame containing all variables in models
   dv.family = character string specifying family for models with outcome DV. 
               Default is 'gaussian'. See ?family for options
   mediator.family = character string specifying family for models with
-                    outcome mediator. Default is 'gaussian'. 
+                    outcome MED. Default is 'gaussian'. 
                     See ?family for options
 
 If modeling all variables against each other:
@@ -40,8 +40,8 @@ If modeling specific pairs within variables
   
 OPTIONAL
   intercept = logical if should include an intercept in the model. Default is TRUE
-  coVar = character string of co-variates to include in model
-  randVar = character string of random effects to include in model
+  coVar = character vector of co-variates to include in model
+  randVar = character vector of random effect to include in model
   boot = logical. If FALSE, quasi-Bayesian approximation  used for confidence
          intervals. If TRUE, nonparametric bootstrap used. Default is FALSE
   plot = logical if should output a flowchart plot of the mediation results.
