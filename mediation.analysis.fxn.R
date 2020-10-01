@@ -103,8 +103,9 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
             drop_na()
           
           #### Make model formulae ####
-          # Note that reformulate( ) works to run models but these models fail in mediate( )
-          # due to variable name issues. Thus, complex paste( ) statements must be used
+          # Note that reformulate( ) works to run models but these models fail in
+          # mediate( ) due to variable name issues. Thus, complex paste( ) 
+          # statements must be used
           
           # WITHOUT random effects
           if(is.null(randVar)){
