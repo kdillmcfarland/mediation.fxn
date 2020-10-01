@@ -495,12 +495,10 @@ basic.plot <- function(result=result, DV=DV, IV=IV, MED=MED,
                       title.plot$p.value, collapse = ", ")
   title.plot <- gsub(" NA$", "", title.plot)
   } else{
-    title.plot <- result.mediation %>% 
-      mutate(across(is.numeric, ~round(.,digits=2)))
-    title.plot<-  paste("ACME=", title.plot$ACME,", ",
-                        "ADE=", title.plot$ADE,", ",
-                        "Tot effect=", title.plot$tot.Effect,", ",
-                        "Prop mediated=", title.plot$prop.mediated, sep="")
+    title.plot<-  paste("ACME=", round(result.mediation$ACME, digits=2),", ",
+            "ADE=", round(result.mediation$ADE, digits=2),", ",
+            "Tot effect=", round(result.mediation$tot.Effect, digits=2),", ",
+            "Prop mediated=", round(result.mediation$prop.mediated, digits=2), sep="")
   }
   
   #### Save plot ####
