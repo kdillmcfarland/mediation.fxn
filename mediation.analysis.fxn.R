@@ -85,9 +85,9 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
   }
   
   #Force boot=TRUE if using binomial models
-  if(dv.family=="binomial" & boot==FALSE){
+  if(dv.family=="binomial" & formal.med==TRUE & boot==FALSE){
     boot=TRUE
-    message("Binomial DV models require nonparametric bootstrap. Setting boot to TRUE.")
+    message("Binomial outcomes require nonparametric bootstrap. Setting boot to TRUE.")
   }
   
   #### Loops for iv, dv, mediator vectors ####
