@@ -42,6 +42,8 @@ OPTIONAL
   intercept = logical if should include an intercept in the model. Default is TRUE
   coVar = character vector of co-variates to include in model
   randVar = character vector of random effect to include in model
+  formal.med = logical if should run formal mediation with mediation::mediate ( )
+               Not recommened for binomial outcomes. Default is TRUE
   boot = logical. If FALSE, quasi-Bayesian approximation  used for confidence
          intervals. If TRUE, nonparametric bootstrap used. Default is FALSE
   plot = logical if should output a flowchart plot of the mediation results.
@@ -52,11 +54,11 @@ OPTIONAL
 
 mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
                           var.dat=NULL,
-                          intercept=TRUE,
-                          dv.family = "gaussian", 
-                          mediator.family = "gaussian",
-                          coVar=NULL, randVar=NULL, plot=FALSE,
-                          boot=FALSE, outdir=NULL, prefix="mediation", ...){
+                          dv.family="gaussian", 
+                          mediator.family="gaussian",
+                          intercept=TRUE, coVar=NULL, randVar=NULL, 
+                          boot=FALSE, formal.med=TRUE,
+                          plot=FALSE, outdir=NULL, prefix="mediation", ...){
   #### Setup ####
   #Unload dplyr if loaded, to avoid issues with plyr
   if ("dplyr" %in% (.packages())){
@@ -79,8 +81,10 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
   mediation.result <- list()
   
   #Assign some variables to global environment for mediate
+  if(formal.med){
   assign("dv.family", dv.family, envir = .GlobalEnv)
-  assign("mediator.family", mediator.family, envir = .GlobalEnv)
+  assign("mediator.family", mediator.family, envir = .GlobalEnv)}
+  
   
   #Force boot=TRUE if using binomial models
   if(dv.family=="binomial" & boot==FALSE){
@@ -153,7 +157,8 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
           }
           
           #### MEDIATION ####
-          #Assign models to global environment for mediate
+          if(formal.med){
+          #Assign models to global environment for mediate( )
           assign("m.mediator", m.mediator, envir = .GlobalEnv)
           assign("m.dv", m.dv, envir = .GlobalEnv)
         
@@ -164,8 +169,12 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
                                mediator = MED,
                                covariates = coVar,
                                boot = boot)
+          }, error=function(e){
+            print(paste("Could not complete formal mediation for ", 
+                        DV, " ~ ", IV, " + ", MED))
+          })} 
           
-          #### Extract results ####
+          #### Extract model results ####
           # WITHOUT random effects
           if(is.null(randVar)){
             result <- tidy(fit.totEffect) %>% 
@@ -197,14 +206,15 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
               dplyr::select(model, everything())
           }
           
-          #Mediation analysis
+          #### Extract mediation results ####
+          if(formal.med){
           mediation.summ <- summary(mediation)
           
           result.mediation <- data.frame(
             #ACME = average causal mediation effects
             #ADE = average direct effects
             model="mediation",
-            term = c("ACME","ADE","Total Effect","Prop. Mediated"),
+            term = c("ACME","ADE","tot.Effect","prop.mediated"),
             estimate = c(mediation.summ$d0, mediation.summ$z0,
                          mediation.summ$tau.coef, mediation.summ$n0),
             
@@ -216,6 +226,17 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
             
             p.value = c(mediation.summ$d0.p, mediation.summ$z0.p,
                         mediation.summ$tau.p, mediation.summ$n0.p))
+          } else{
+            result.mediation <- data.frame(
+              #ACME = average causal mediation effects
+              #ADE = average direct effects
+              model="mediation",
+              ACME = filter(result, model=="MED~IV" & term==IV)$estimate *
+                filter(result, model=="DV~IV+MED" & term==MED)$estimate,
+              ADE = filter(result, model=="DV~IV+MED" & term==IV)$estimate) %>% 
+              mutate(tot.Effect = ACME+ADE,
+                     prop.mediated = ACME/tot.Effect)
+          }
           
           #### Save results to list ####
           name <- paste(DV,IV,MED, sep=".")
@@ -228,10 +249,6 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
                        result.mediation=result.mediation,
                        outdir=outdir, prefix=prefix, name=name)
           }
-          }, error=function(e){
-            print(paste("Could not complete mediation for ", 
-                        DV, " ~ ", IV, " + ", MED))
-          })
         }}}
   } else{
   #### Loop for var.dat pairs ####
@@ -247,7 +264,6 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
       dplyr::select(1, all_of(c(IV, DV, MED, coVar, randVar))) %>% 
       drop_na()
           
-      assign("dat.sub",dat.sub, envir = .GlobalEnv)
     #### Make model formulae ####
     # Note that reformulate( ) works to run models but these models fail in mediate( )
     # due to variable name issues. Thus, complex paste( ) statements must be used
@@ -299,89 +315,101 @@ mediation.fxn <- function(dat, iv=NULL, dv=NULL, mediator=NULL,
       fit.dv <- glmer(m.dv, data=dat.sub, 
                             family = dv.family)
     }
-          
-    #### MEDIATION ####
-    #Assign models to global environment for mediate
-    assign("m.mediator", m.mediator, envir = .GlobalEnv)
-    assign("m.dv", m.dv, envir = .GlobalEnv)
-     
-    tryCatch({     
-    mediation <- mediate(model.m = fit.mediator,
+    
+      #### MEDIATION ####
+      if(formal.med){
+        #Assign models to global environment for mediate( )
+        assign("m.mediator", m.mediator, envir = .GlobalEnv)
+        assign("m.dv", m.dv, envir = .GlobalEnv)
+        
+        tryCatch({
+          mediation <- mediate(model.m = fit.mediator,
                                model.y = fit.dv, 
                                treat = IV, 
                                mediator = MED,
                                covariates = coVar,
                                boot = boot)
-    
-    #### Extract results ####
-    # WITHOUT random effects
-    if(is.null(randVar)){
-      result <- tidy(fit.totEffect) %>% 
-        bind_rows(tidy(fit.mediator)) %>% 
-        bind_rows(tidy(fit.dv)) %>% 
-        mutate(model = c(rep("DV~IV", nrow(tidy(fit.totEffect))),
-                         rep("MED~IV", nrow(tidy(fit.mediator))),
-                         rep("DV~IV+MED", nrow(tidy(fit.dv))))) %>% 
-        dplyr::select(model, everything())
-    } else{
-      # WITH random effects
-      m.result <- tidy(fit.totEffect) %>% 
-        bind_rows(tidy(fit.mediator)) %>% 
-        bind_rows(tidy(fit.dv)) %>% 
-        mutate(model = c(rep("DV~IV", nrow(tidy(fit.totEffect))),
-                         rep("MED~IV", nrow(tidy(fit.mediator))),
-                         rep("DV~IV+MED", nrow(tidy(fit.dv)))))
-      #Estimate p-values
-      p.result <- tidy(Anova(fit.totEffect)) %>% 
-        bind_rows(tidy(Anova(fit.mediator))) %>% 
-        bind_rows(tidy(Anova(fit.dv))) %>% 
-        mutate(model = c(rep("DV~IV", nrow(tidy(Anova(fit.totEffect)))),
-                         rep("MED~IV", nrow(tidy(Anova(fit.mediator)))),
-                         rep("DV~IV+MED", nrow(tidy(Anova(fit.dv)))))) %>% 
-        mutate(effect="fixed") %>% 
-        rename(statistic.Anova = statistic)
+        }, error=function(e){
+          print(paste("Could not complete formal mediation for ", 
+                      DV, " ~ ", IV, " + ", MED))
+        })} 
       
-      result <- full_join(m.result, p.result) %>% 
-        dplyr::select(model, everything())
+      #### Extract model results ####
+      # WITHOUT random effects
+      if(is.null(randVar)){
+        result <- tidy(fit.totEffect) %>% 
+          bind_rows(tidy(fit.mediator)) %>% 
+          bind_rows(tidy(fit.dv)) %>% 
+          mutate(model = c(rep("DV~IV", nrow(tidy(fit.totEffect))),
+                           rep("MED~IV", nrow(tidy(fit.mediator))),
+                           rep("DV~IV+MED", nrow(tidy(fit.dv))))) %>% 
+          dplyr::select(model, everything())
+      } else{
+        # WITH random effects
+        m.result <- tidy(fit.totEffect) %>% 
+          bind_rows(tidy(fit.mediator)) %>% 
+          bind_rows(tidy(fit.dv)) %>% 
+          mutate(model = c(rep("DV~IV", nrow(tidy(fit.totEffect))),
+                           rep("MED~IV", nrow(tidy(fit.mediator))),
+                           rep("DV~IV+MED", nrow(tidy(fit.dv)))))
+        #Estimate p-values
+        p.result <- tidy(Anova(fit.totEffect)) %>% 
+          bind_rows(tidy(Anova(fit.mediator))) %>% 
+          bind_rows(tidy(Anova(fit.dv))) %>% 
+          mutate(model = c(rep("DV~IV", nrow(tidy(Anova(fit.totEffect)))),
+                           rep("MED~IV", nrow(tidy(Anova(fit.mediator)))),
+                           rep("DV~IV+MED", nrow(tidy(Anova(fit.dv)))))) %>% 
+          mutate(effect="fixed") %>% 
+          rename(statistic.Anova = statistic)
+        
+        result <- full_join(m.result, p.result) %>% 
+          dplyr::select(model, everything())
+      }
+      
+      #### Extract mediation results ####
+      if(formal.med){
+        mediation.summ <- summary(mediation)
+        
+        result.mediation <- data.frame(
+          #ACME = average causal mediation effects
+          #ADE = average direct effects
+          model="mediation",
+          term = c("ACME","ADE","tot.Effect","prop.mediated"),
+          estimate = c(mediation.summ$d0, mediation.summ$z0,
+                       mediation.summ$tau.coef, mediation.summ$n0),
+          
+          CI95_lower =c(mediation.summ$d0.ci[1], mediation.summ$z0.ci[1],
+                        mediation.summ$tau.ci[1], mediation.summ$n0.ci[1]),
+          
+          CI95_upper = c(mediation.summ$d0.ci[2], mediation.summ$z0.ci[2],
+                         mediation.summ$tau.ci[2], mediation.summ$n0.ci[2]),
+          
+          p.value = c(mediation.summ$d0.p, mediation.summ$z0.p,
+                      mediation.summ$tau.p, mediation.summ$n0.p))
+      } else{
+        result.mediation <- data.frame(
+          #ACME = average causal mediation effects
+          #ADE = average direct effects
+          model="mediation",
+          ACME = filter(result, model=="MED~IV" & term==IV)$estimate *
+            filter(result, model=="DV~IV+MED" & term==MED)$estimate,
+          ADE = filter(result, model=="DV~IV+MED" & term==IV)$estimate) %>% 
+          mutate(tot.Effect = ACME+ADE,
+                 prop.mediated = ACME/tot.Effect)
+      }
+      
+      #### Save results to list ####
+      name <- paste(DV,IV,MED, sep=".")
+      model.result[[name]] <- result
+      mediation.result[[name]] <- result.mediation
+      
+      #### Plot ####
+      if(plot){
+        basic.plot(result=result, DV=DV, IV=IV, MED=MED,
+                   result.mediation=result.mediation,
+                   outdir=outdir, prefix=prefix, name=name)
+      }
     }
-    
-    #Mediation analysis
-    mediation.summ <- summary(mediation)
-    
-    result.mediation <- data.frame(
-      #ACME = average causal mediation effects
-      #ADE = average direct effects
-      model="mediation",
-      term = c("ACME","ADE","Total Effect","Prop. Mediated"),
-      estimate = c(mediation.summ$d0, mediation.summ$z0,
-                   mediation.summ$tau.coef, mediation.summ$n0),
-      
-      CI95_lower =c(mediation.summ$d0.ci[1], mediation.summ$z0.ci[1],
-                    mediation.summ$tau.ci[1], mediation.summ$n0.ci[1]),
-      
-      CI95_upper = c(mediation.summ$d0.ci[2], mediation.summ$z0.ci[2],
-                     mediation.summ$tau.ci[2], mediation.summ$n0.ci[2]),
-      
-      p.value = c(mediation.summ$d0.p, mediation.summ$z0.p,
-                  mediation.summ$tau.p, mediation.summ$n0.p))
-    
-    #### Save results to list ####
-    name <- paste(DV,IV,MED, sep=".")
-    model.result[[name]] <- result
-    mediation.result[[name]] <- result.mediation
-    
-    #### Plot ####
-    if(plot){
-      basic.plot(result=result, DV=DV, IV=IV, MED=MED,
-                 result.mediation=result.mediation,
-                 outdir=outdir, prefix=prefix, name=name)
-    }
-    
-    }, error=function(e){
-      print(paste("Could not complete mediation for ", 
-                  DV, " ~ ", IV, " + ", MED))
-    })
-        }
   }
   
   #### Save tables to disk ####
