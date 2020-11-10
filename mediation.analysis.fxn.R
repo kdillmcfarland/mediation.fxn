@@ -466,7 +466,7 @@ basic.plot <- function(result=result, DV=DV, IV=IV, MED=MED,
                       round(iv.dv.lab2[1], digits=3), 
                       " P = ", round(iv.dv.lab2[2], digits=3), sep="")
   
-  iv.dv.lab <- paste(iv.dv.lab1, iv.dv.lab2, med.dv.lab, sep="\n")
+  iv.dv.lab <- paste(iv.dv.lab1, iv.dv.lab2, sep="\n")
   
   ##### Format df for diagram #####
   nodes <- create_node_df(n=3,
@@ -481,7 +481,7 @@ basic.plot <- function(result=result, DV=DV, IV=IV, MED=MED,
   edges <- create_edge_df(from = c(1,1,2),
                           to = c(3,2,3),
                           color = "black",
-                          label = c(iv.dv.lab, iv.med.lab, ""))
+                          label = c(iv.dv.lab, iv.med.lab, med.dv.lab))
   
   graph <- create_graph(nodes_df = nodes,
                         edges_df = edges,
